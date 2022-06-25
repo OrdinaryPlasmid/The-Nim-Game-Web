@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>The Nim Game</title>
+        <style>
+            body{
+                background-image: url("competition.jpg");
+                background-repeat: no-repeat;
+                background-size:100% 100%;
+                background-attachment:fixed;
+            }
+            #title-1 {
+                text-align: center;
+                font-weight: bold;
+                font-size: 3rem;
+            }
+            #title-2 {
+                text-align: center;
+                font-weight: bold;
+                font-size: 1.2rem;
+            }
+            .title-3 {
+                text-align: center;
+                font-weight: bold;
+                font-size: 2rem;
+                padding: 0.5rem;
+            }
+            #outcome {
+                text-align: center;
+                font-weight: bold;
+                font-size: 2rem;
+                padding: 0.5rem;
+                color:crimson;
+            }
+            .historyUser {
+                font-size: 1.2rem
+            }
+            .historyWebsite {
+                font-size: 1.2rem
+            }
+            .intro {
+                text-align: center;
+                font-size: 1.2rem;
+                height: 1.8rem;
+            }
+            #container {
+                box-sizing: border-box;
+                width: 80vw;
+                margin: auto;
+            }
+            #record {
+                float: left;
+                width: 39vw;
+            }
+            #interface {
+                float: right;
+                width: 39vw;
+            }
+            #record-table {
+                margin: auto;
+                text-align: center;
+            }
+            #table-head-user {
+                width: 15vw;
+                font-weight: bold;
+                font-size: 1.6rem;
+            }
+            #table-head-website {
+                width: 15vw;
+                font-weight: bold;
+                font-size: 1.6rem;
+            }
+            #table-content-user {
+                font-size: 1.2rem;
+            }
+            #table-content-website{
+                font-size: 1.2rem;
+            }
+            #inner-interface {
+                position: relative;
+                left: 6vw;
+                margin: auto;
+            }
+            .hint {
+                text-align: left;
+                font-size: 1.6rem;
+                height: 2rem;
+            }
+            .hint-text {
+                text-align: left;
+                font-size: 1.6rem;
+                height: 2rem;
+                color:crimson;
+            }
+        </style>
+    </head>
+    
+    <body>
+        <br>
+        <div id = "title-1">The Nim Game</div>
+        <br>
+        <div class = "intro">灵感来自离散数学教材。</div>
+        <div class = "intro">创新性：尽可能实现电脑胜率最大化，且可将编程思路抽象为<b>有限自动机</b>，可点击<b>“我的思路”</b>查看。</div>
+        <div class = "intro">致谢：感谢答疑助教吕星宇学长的修改意见及部分思路提示！</div>
+        <div class = "intro">背景图片来源：www.pixabay.com</div>
+        <br>
+        <div class = "intro">现有一共<b>n</b>个石子，玩家和电脑轮流取石子，每次<b>最多可以拿m个，最少拿1个。</b></div>
+        <div class = "intro"><b>拿走最后一个石子的一方获得本轮游戏胜利。</b></div>
+        <div class = "intro">“玄学游戏，还是另有窍门？”</div>
+        <hr>
+        <div id = "container">
+            <div id = "record">
+                <div class = "title-3">最近操作</div>
+                <table border = "0" id = "record-table">
+                    <tr>
+                        <td><div id = "table-head-user">玩家</div></td>
+                        <td><div id = "table-head-website">电脑</div></td>
+                    </tr>
+                    <tr>
+                        <td><div id = "table-content-user"></div></td>
+                        <td><div id = "table-content-website"></div></td>
+                    </tr>
+                </table>
+                <div id = "outcome"></div>
+            </div>
+            <div id = "interface">
+                <div class = "title-3">操作区域</div>
+                <div id = "inner-interface">
+                    <div>
+                        <span class = "hint">剩余石子数：</span>
+                        <span class = "hint-text" id = "nvalue"></span>
+                    </div>
+                    <div>
+                        <span class = "hint">当前操作者：</span>
+                        <span class = "hint-text" id = "operator"></span>
+                    </div>
+                    <div>
+                        <span class = "hint">剩余操作次数：</span>
+                        <span class = "hint-text" id = "operations"></span>
+                    </div>
+                    <br>
+                    <form>
+                        设置总石子数n（3~100）
+                        <input type="number" id="n" value="36" min = "3" max = "100">
+                        <br>
+                        设置每次最多移动石子数m（2~n-1）
+                        <input type="number" id="m" value="7" min = "2" max = "100">
+                        <br>
+                        谁是先手<input type="radio" name="op" value="玩家" checked>玩家<input type="radio" name="op" value="电脑">电脑
+                        <br>
+                        <button type="button" id="gameStarter" onclick="gameStart()">开始游戏</button>
+                        <button type="button" id="randomizer" onclick="randomize()">随机生成参数</button>
+                        <button type="button" id="userMover" onclick="userMove()">移动石子</button>
+                        <button type="button" id="userStopper" onclick="userStop()">停止移动</button>
+                        <button type="button" id="mySolution" onclick="window.open('my-solution.png')">我的思路</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            var n, m, status;
+            var cnt = 0, cntUser = 0;
+            /*when status == 1, then the website is sure to win;
+              when tatus == 0, then it's not certain whether the website will win or not, but if n is 0 now, then the user wins*/
+            var firstMover;
+            var checkStart = false;
+            /*The value of this parameter is determined by the order of the two 
+              when firstMover == 0, then the user plays first;
+              when firstMover == 1, then the website plays first.*/
+            function gameStart() {
+                n = document.getElementById("n").value - 0;
+                m = document.getElementById("m").value - 0;
+                var checkStart1 = true, checkStart2 = false;
+                checkStart = false;
+                var options = document.getElementsByName("op");
+                if(n<m){
+                    window.alert("输入错误1：n大于m！")
+                    checkStart1 = false;
+                }
+                for(var i=0; i<options.length; i++){
+                    if(options[i].checked == true){
+                        checkStart2 = true;
+                        firstMover = i;
+                        break;
+                    }
+                }
+                if(checkStart2 == false){
+                    window.alert("错误2：未选择先手！");
+                }
+                checkStart = checkStart1 & checkStart2;
+                if(checkStart == true){
+                    document.getElementById("gameStarter").disabled = true;
+                    document.getElementById("userStopper").disabled = true;
+                    document.getElementById("nvalue").innerHTML = n;
+                    document.getElementById("operations").innerHTML = m;
+                    document.getElementById("outcome").innerHTML = "";
+                    document.getElementById("table-content-user").innerHTML = 0;
+                    document.getElementById("table-content-website").innerHTML = 0;
+                    document.getElementById("table-head-user").style.color = "black";
+                    document.getElementById("table-head-website").style.color = "black";
+                    if(firstMover == 1){
+                        document.getElementById("userMover").disabled = true;
+                        document.getElementById("operator").innerHTML = "电脑";
+                        document.getElementById("table-head-website").style.color = "crimson";
+                        if(n%(m+1)!=0){
+                            websiteMove(n%(m+1));
+                            status = 1;
+                        } else {
+                            websiteMove(1); //add a random number here if possible.
+                            status = 0;
+                        }
+                    } else {
+                        document.getElementById("operator").innerHTML = "玩家";
+                        document.getElementById("table-head-user").style.color = "crimson";
+                    }
+                    document.getElementById("userMover").disabled = false;
+                    document.getElementById("randomizer").disabled = true;
+                }
+            }
+            function randomize(){
+                var nRandom = Math.floor(Math.random()*98+3);
+                var mRandom = Math.floor(Math.random()*(nRandom-3)+2);
+                document.getElementById("n").value = nRandom;
+                document.getElementById("m").value = mRandom;
+            }
+            function userMove(){
+                //to initialize when the website finishes moving, see in the function userStop().
+                cnt++;
+                n--;
+                document.getElementById("userStopper").disabled = false;
+                document.getElementById("table-content-user").innerHTML = cnt;
+                document.getElementById("nvalue").innerHTML = n;
+                document.getElementById("operations").innerHTML = m-cnt;
+                document.getElementById("operator").innerHTML = "玩家";
+                if(cnt == m){
+                    document.getElementById("userMover").disabled = true;
+                }
+            }
+            const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
+            async function websiteMove(t){
+                for(var i=1; i<=t; i++){
+                    await sleep(400);
+                    n--;
+                    document.getElementById("nvalue").innerHTML = n;
+                    document.getElementById("operations").innerHTML -= 1;
+                    document.getElementById("table-content-website").innerHTML = i;
+                    await sleep(400);
+                }
+                document.getElementById("userMover").disabled = false;
+                var tempUser = document.getElementById("table-content-user").innerHTML;
+                var tempM = document.getElementById("operations").innerHTML;
+                document.getElementById("operations").innerHTML = m;
+                document.getElementById("operator").innerHTML = "玩家";
+                document.getElementById("table-content-user").innerHTML = 0;
+                cnt = 0;
+                document.getElementById("table-head-user").style.color = "crimson";
+                document.getElementById("table-head-website").style.color = "black";
+                if(n == 0){
+                    document.getElementById("outcome").innerHTML = "电脑获胜！调整参数后可开始新游戏";
+                    checkStart = true;
+                    document.getElementById("table-content-user").innerHTML = tempUser;
+                    document.getElementById("operations").innerHTML = tempM;
+                    document.getElementById("operator").innerHTML = "电脑";
+                    document.getElementById("userMover").disabled = true;
+                    document.getElementById("gameStarter").disabled = false;
+                    document.getElementById("randomizer").disabled = false;
+                    document.getElementById("table-head-user").style.color = "black";
+                    document.getElementById("table-head-website").style.color = "black";
+                }
+            }
+            function userStop(){
+                if(n == 0){
+                    document.getElementById("outcome").innerHTML = "玩家获胜！调整参数后可开始新游戏";
+                    document.getElementById("userMover").disabled = true;
+                    checkStart = false;
+                    document.getElementById("gameStarter").disabled = false;
+                    document.getElementById("randomizer").disabled = false;
+                    document.getElementById("table-head-user").style.color = "black";
+                    document.getElementById("table-head-website").style.color = "black";
+                } else {
+                    document.getElementById("userMover").disabled = true;
+                    document.getElementById("gameStarter").disabled = true;
+                    document.getElementById("userStopper").disabled = true;
+                    document.getElementById("operations").innerHTML = m;
+                    document.getElementById("table-content-website").innerHTML = 0;
+                    document.getElementById("operator").innerHTML = "电脑";
+                    document.getElementById("table-head-user").style.color = "black";
+                    document.getElementById("table-head-website").style.color = "crimson";
+                    if(n%(m+1)!=0){
+                        websiteMove(n%(m+1));
+                    } else {
+                        websiteMove(1);
+                    }
+                }
+            }
+        </script>
+    </body>
+</html>
